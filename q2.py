@@ -2,14 +2,28 @@
 # Görkem Kadir Solun - 22003214
 # Cahit Ediz Civan - 22003206
 
+import time
+
 import gurobipy as gp
 from gurobipy import GRB
 
+# Set the start time
+start_time = time.time()
+
 # Parameters
-items = ["Granola Bars", "Trail Mix", "Dried Fruit", "Canned Beans", "Rice", "Energy Drink", "Pasta", "Jerky"]
-weights = [2, 1, 2, 6, 4, 6, 5, 2] # in kgs
-calories = [300, 800, 200, 800, 1100, 150, 1200, 500] # in cals
-costs = [5, 10, 4, 7, 8, 3, 9, 6] # in dollars
+items = [
+    "Granola Bars",
+    "Trail Mix",
+    "Dried Fruit",
+    "Canned Beans",
+    "Rice",
+    "Energy Drink",
+    "Pasta",
+    "Jerky",
+]
+weights = [2, 1, 2, 6, 4, 6, 5, 2]  # in kgs
+calories = [300, 800, 200, 800, 1100, 150, 1200, 500]  # in cals
+costs = [5, 10, 4, 7, 8, 3, 9, 6]  # in dollars
 
 ece_capacity = 10
 arda_capacity = 8
@@ -25,8 +39,12 @@ model.setParam(GRB.Param.OutputFlag, 0)
 x = {}
 y = {}
 for i in range(len(items)):
-    x[i] = model.addVar(vtype=GRB.BINARY, name=f"x_{i}")  # x_i: item i is included in Ece's bag
-    y[i] = model.addVar(vtype=GRB.BINARY, name=f"y_{i}")  # y_i: item i is included in Arda's bag
+    x[i] = model.addVar(
+        vtype=GRB.BINARY, name=f"x_{i}"
+    )  # x_i: item i is included in Ece's bag
+    y[i] = model.addVar(
+        vtype=GRB.BINARY, name=f"y_{i}"
+    )  # y_i: item i is included in Arda's bag
 
 # Constraints
 # Capacity (Weight) Constraint for Ece's Bag
@@ -67,3 +85,6 @@ if model.status == GRB.OPTIMAL:
     print(f"Total cost: ${model.objVal}")
 else:
     print("No optimal solution found.")
+
+# Print the runtime
+print(f"Runtime: {time.time() - start_time:.2f} seconds")

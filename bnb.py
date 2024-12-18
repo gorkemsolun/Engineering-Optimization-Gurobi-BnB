@@ -1,41 +1,63 @@
+import time as time
+
 from scipy.optimize import linprog
+
+# Start the timer
+start_time = time.time()
+
+
 class Item:
-    
+
     def __init__(self, name, weight, calories, cost):
         self.name = name
         self.weight = weight
         self.calories = calories
         self.cost = cost
+
     def __repr__(self):
-        return (f"{self.name}: weight={self.weight}, "
-                f"calories={self.calories}, cost=${self.cost:.2f}")
+        return (
+            f"{self.name}: weight={self.weight}, "
+            f"calories={self.calories}, cost=${self.cost:.2f}"
+        )
+
 
 class Branch_And_Bound:
-    
+
     def __init__(self, items, capacity1, capacity2, total_calories_req):
         self.items = items
         self.n_items = len(items)
         self.capacity1 = capacity1
         self.capacity2 = capacity2
         self.total_calories_req = total_calories_req
-        self.best_cost = float('inf')
+        self.best_cost = float("inf")
         self.best_x = [0] * self.n_items
         self.best_y = [0] * self.n_items
         self.feasible = False
         self.iterations = 0
-    
-    def is_feasible(self, x, y):
-        total_weight_ece = sum(self.items[i].weight for i in range(self.n_items) if x[i] == 1)
-        total_weight_arda = sum(self.items[i].weight for i in range(self.n_items) if y[i] == 1)
 
-        return (total_weight_ece <= self.capacity1 and
-                total_weight_arda <= self.capacity2 )
+    def is_feasible(self, x, y):
+        total_weight_ece = sum(
+            self.items[i].weight for i in range(self.n_items) if x[i] == 1
+        )
+        total_weight_arda = sum(
+            self.items[i].weight for i in range(self.n_items) if y[i] == 1
+        )
+
+        return (
+            total_weight_ece <= self.capacity1 and total_weight_arda <= self.capacity2
+        )
 
     def calculate_cost(self, x, y):
-        return sum(self.items[i].cost for i in range(self.n_items) if x[i] == 1 or y[i] == 1)
-    
+        return sum(
+            self.items[i].cost for i in range(self.n_items) if x[i] == 1 or y[i] == 1
+        )
+
     def calories_met(self, x, y):
-        total_calories = sum(self.items[i].calories for i in range(self.n_items) if x[i] == 1 or y[i] == 1)
+        total_calories = sum(
+            self.items[i].calories
+            for i in range(self.n_items)
+            if x[i] == 1 or y[i] == 1
+        )
         return total_calories >= self.total_calories_req
 
     def display_bag(self, x, y):
@@ -73,16 +95,26 @@ class Branch_And_Bound:
         weights = [self.items[i].weight for i in current_indices]
         A_ub = [
             weights + [0] * len(weights),  # x capacity constraint
-            [0] * len(weights) + weights   # y capacity constraint
+            [0] * len(weights) + weights,  # y capacity constraint
         ]
-        x_capacity = self.capacity1 - sum(self.items[i].weight for i in range(self.n_items) if x[i] == 1)
-        y_capacity = self.capacity2 - sum(self.items[i].weight for i in range(self.n_items) if y[i] == 1)
+        x_capacity = self.capacity1 - sum(
+            self.items[i].weight for i in range(self.n_items) if x[i] == 1
+        )
+        y_capacity = self.capacity2 - sum(
+            self.items[i].weight for i in range(self.n_items) if y[i] == 1
+        )
         b_ub = [x_capacity, y_capacity]
 
         # Calorie constraint
         calories = [self.items[i].calories for i in current_indices]
-        A_ub.append([-c for c in calories] + [-c for c in calories])  # Total calories constraint (at least threshold)
-        total_calories = sum(self.items[i].calories for i in range(self.n_items) if x[i] == 1 or y[i] == 1)
+        A_ub.append(
+            [-c for c in calories] + [-c for c in calories]
+        )  # Total calories constraint (at least threshold)
+        total_calories = sum(
+            self.items[i].calories
+            for i in range(self.n_items)
+            if x[i] == 1 or y[i] == 1
+        )
         b_ub.append(-(self.total_calories_req - total_calories))
 
         # Add constraint to ensure sum of x[i] and y[i] cannot exceed 1
@@ -97,29 +129,27 @@ class Branch_And_Bound:
         bounds = [(0, 1)] * (2 * len(current_indices))
 
         # Solve the linear programming problem
-        result = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds, method='highs')
+        result = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds, method="highs")
 
         if result.success:
             # Extract the solutions for x and y
             solution = {
-                'x': result.x[:len(current_indices)],
-                'y': result.x[len(current_indices):],
-                'total_cost': result.fun
+                "x": result.x[: len(current_indices)],
+                "y": result.x[len(current_indices) :],
+                "total_cost": result.fun,
             }
             return result.fun
         else:
-            solution = {'error': 'No feasible solution found'}
-            return float('inf')
+            solution = {"error": "No feasible solution found"}
+            return float("inf")
 
-
-    
     def branch_and_bound(self, level, x, y):
         self.iterations += 1
         cost = self.calculate_cost(x, y)
         # Pruning: If the current solution is infeasible or suboptimal (Cannot keep adding and beat the current optimal) stop branching
         if not self.is_feasible(x, y) or (cost >= self.best_cost):
             return
-        
+
         if cost < self.best_cost and self.calories_met(x, y):
             self.best_x = x[:]
             self.best_y = y[:]
@@ -127,16 +157,15 @@ class Branch_And_Bound:
             self.feasible = True
             print("Current best:")
             self.display_bag(x, y)
-            
-        
+
         if level == self.n_items:
-            return 
-        
+            return
+
         linear_solution = self.linear_relaxation(x, y, level)
         if linear_solution > self.best_cost:
             # cannot find a better  solution, prune
             return
-        
+
         x_state = x[:]
         y_state = y[:]
 
@@ -156,7 +185,7 @@ class Branch_And_Bound:
         self.branch_and_bound(level + 1, x, y)
 
         return
-        
+
     def solve(self):
         x = [0] * self.n_items
         y = [0] * self.n_items
@@ -173,10 +202,19 @@ class Branch_And_Bound:
 
 def main():
     # Parameters
-    items = ["Granola Bars", "Trail Mix", "Dried Fruit", "Canned Beans", "Rice", "Energy Drink", "Pasta", "Jerky"]
-    weights = [2, 1, 2, 6, 4, 6, 5, 2] # in kgs
-    calories = [300, 800, 200, 800, 1100, 150, 1200, 500] # in cals
-    costs = [5, 10, 4, 7, 8, 3, 9, 6] # in dollars
+    items = [
+        "Granola Bars",
+        "Trail Mix",
+        "Dried Fruit",
+        "Canned Beans",
+        "Rice",
+        "Energy Drink",
+        "Pasta",
+        "Jerky",
+    ]
+    weights = [2, 1, 2, 6, 4, 6, 5, 2]  # in kgs
+    calories = [300, 800, 200, 800, 1100, 150, 1200, 500]  # in cals
+    costs = [5, 10, 4, 7, 8, 3, 9, 6]  # in dollars
 
     # Create a list to hold Item objects
     Items = []
@@ -192,26 +230,17 @@ def main():
     arda_calories_requirement = 1500
     total_calories_requirement = ece_calories_requirement + arda_calories_requirement
 
-    bnb = Branch_And_Bound(Items, capacity1=ece_capacity, capacity2=arda_capacity, total_calories_req=total_calories_requirement)
+    bnb = Branch_And_Bound(
+        Items,
+        capacity1=ece_capacity,
+        capacity2=arda_capacity,
+        total_calories_req=total_calories_requirement,
+    )
     bnb.solve()
 
 
-    
 if __name__ == "__main__":
     main()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Print the time taken to run the script
+print(f"Time taken: {time.time() - start_time:.2f} seconds.")
