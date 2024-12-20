@@ -8,7 +8,6 @@ import gurobipy as gp
 from gurobipy import GRB
 
 # Set the start time
-start_time = time.time()
 
 # Parameters
 items = [
@@ -66,7 +65,9 @@ total_cost = sum(costs[i] * (x[i] + y[i]) for i in range(len(items)))
 model.setObjective(total_cost, GRB.MINIMIZE)
 
 # Solve the second question
+start_time = time.time()
 model.optimize()
+end_time = time.time()
 
 # Results
 if model.status == GRB.OPTIMAL:
@@ -87,4 +88,4 @@ else:
     print("No optimal solution found.")
 
 # Print the runtime
-print(f"Runtime: {time.time() - start_time:.2f} seconds")
+print(f"Runtime: {end_time - start_time} seconds")
