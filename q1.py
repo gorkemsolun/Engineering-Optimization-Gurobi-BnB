@@ -159,8 +159,7 @@ u = model.addVars(cities, vtype=GRB.CONTINUOUS, name="u")
 # Constants
 max_cities_to_visit = 7  # Maximum number of cities to visit is 7
 max_travel_cost = 1500  # Maximum travel cost is $1,500
-# NOTE: Check this value
-n = min(len(cities), max_cities_to_visit)  # Number of cities to visit
+n = len(cities)  # Number of cities to visit
 
 
 # Objective function
